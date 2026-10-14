@@ -1,0 +1,161 @@
+package com.example.snake2d;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.view.View;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.view.MotionEvent;
+import android.os.Handler;
+import java.util.ArrayList;
+import java.util.Random;
+
+public class MainActivity extends Activity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN);
+        setContentView(new SnakeGame());
+    }
+
+    class SnakeGame extends View {
+        Paint p = new Paint();
+        Handler h = new Handler();
+        Random r = new Random();
+        ArrayList sx = new ArrayList<>();
+        ArrayList sy = new ArrayList<>();
+
+        int cell = 30, cols = 1, rows = 1;
+        int dx = 1, dy = 0, fx = 8, fy = 8, score = 0;
+        boolean over = false;
+        float tx, ty;
+
+        SnakeGame() {
+            super(MainActivity.this);
+            setBackgroundColor(Color.rgb(12, 18, 30));
+            sx.add(5); sx.add(4); sx.add(3);
+            sy.add(5); sy.add(5); sy.add(5);
+            h.postDelayed(this::tick, 180);
+        }
+
+        void food() {
+            fx = r.nextInt(Math.max(1, cols));
+            fy = r.nextInt(Math.max(1, rows));
+        }
+
+        void tick() {
+            if (!over && getWidth() > 0) {
+                int x = sx.get(0) + dx;
+                int y = sy.get(0) + dy;
+
+                boolean hit = x < 0 || y < 0 ||
+                    x >= cols || y >= rows;
+
+                for (int i = 0; i < sx.size(); i++) {
+                    if (sx.get(i) == x && sy.get(i) == y) {
+                        hit = true;
+                        break;
+                    }
+                }
+
+                if (hit) {
+                    over = true;
+                } else {
+                    sx.add(0, x);
+                    sy.add(0, y);
+
+                    if (x == fx && y == fy) {
+                        score += 10;
+                        food();
+                    } else {
+                        sx.remove(sx.size() - 1);
+                        sy.remove(sy.size() - 1);
+                    }
+                }
+                invalidate();
+            }
+            if (!over) h.postDelayed(this::tick, 180);
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            super.onDraw(c);
+            cell = Math.max(16, getWidth() / 20);
+            cols = Math.max(1, getWidth() / cell);
+            rows = Math.max(1, (getHeight() - 110) / cell);
+
+            p.setColor(Color.WHITE);
+            p.setTextSize(42);
+            c.drawText("SNAKE GAME", 20, 48, p);
+            p.setTextSize(30);
+            c.drawText("Score: " + score, 20, 88, p);
+
+            p.setColor(Color.RED);
+            c.drawCircle(fx * cell + cell / 2f,
+                    110 + fy * cell + cell / 2f,
+                    cell / 2.5f, p);
+
+            for (int i = 0; i < sx.size(); i++) {
+                p.setColor(i == 0 ? Color.YELLOW : Color.GREEN);
+                c.drawRect(sx.get(i) * cell + 2,
+                        110 + sy.get(i) * cell + 2,
+                        (sx.get(i) + 1) * cell - 2,
+                        110 + (sy.get(i) + 1) * cell - 2, p);
+            }
+
+            if (over) {
+                p.setColor(Color.WHITE);
+                p.setTextSize(45);
+                c.drawText("GAME OVER", 25, getHeight()/2f, p);
+                p.setTextSize(28);
+                c.drawText("Tap to restart", 25,
+                        getHeight()/2f + 45, p);
+            }
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent e) {
+            if (e.getAction() == MotionEvent.ACTION_DOWN) {
+                tx = e.getX();
+                ty = e.getY();
+                return true;
+            }
+
+            if (e.getAction() == MotionEvent.ACTION_UP) {
+                float ax = e.getX() - tx;
+                float ay = e.getY() - ty;
+
+                if (over) {
+                    sx.clear(); sy.clear();
+                    sx.add(5); sx.add(4); sx.add(3);
+                    sy.add(5); sy.add(5); sy.add(5);
+                    dx = 1; dy = 0; score = 0;
+                    over = false;
+                    food();
+                    h.postDelayed(this::tick, 180);
+                    invalidate();
+                    return true;
+                }
+
+                if (Math.abs(ax) > Math.abs(ay)) {
+                    if (ax > 0 && dx != -1) {
+                        dx = 1; dy = 0;
+                    } else if (ax < 0 && dx != 1) {
+                        dx = -1; dy = 0;
+                    }
+                } else {
+                    if (ay > 0 && dy != -1) {
+                        dx = 0; dy = 1;
+                    } else if (ay < 0 && dy != 1) {
+                        dx = 0; dy = -1;
+                    }
+                }
+                return true;
+            }
+            return true;
+        }
+    }
+}
